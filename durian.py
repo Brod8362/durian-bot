@@ -69,11 +69,12 @@ async def on_message(message):
         await message.channel.send("\n".join(entries))
     elif message.content == "$lbi":
         lb = current_leaderboard()
+        s = time.time()
         image = await generate_image(lb, message.author.id, dclient)
         with BytesIO() as fd:
             image.save(fd, format="PNG")
             fd.seek(0)
-            await message.channel.send(file=discord.File(fd, filename="leaderboard.png"))
+            await message.channel.send(f"generated in {time.time()-s:.1f}s", file=discord.File(fd, filename="leaderboard.png"))
         
 
 @dclient.event
