@@ -69,10 +69,10 @@ async def generate_image(leaderboard: "list[tuple[int, int]]", generating_user: 
             effective_leaderboard.append((generating_user, 0))
     image_segments = []
     ## generate header
-    text_font = ImageFont.truetype("font.ttf", 16)
+    header_font = ImageFont.truetype("font.ttf", 16)
     header: Image.Image = Image.new("RGBA", (IMAGE_WIDTH, 32))
     header_draw = ImageDraw.Draw(header)
-    header_draw.text((0, 0), "Durian Leaderboard", font=text_font)
+    header_draw.text((0, 0), "Durian Leaderboard", font=header_font)
     image_segments.append(header)
     max_score = max(map(lambda x: x[1], leaderboard))
     ## generate user rows
@@ -80,7 +80,7 @@ async def generate_image(leaderboard: "list[tuple[int, int]]", generating_user: 
         print(index)
         row = Image.new("RGBA", (IMAGE_WIDTH, ROW_HEIGHT))
         user = await discord.fetch_user(user_id)
-        
+
         if user_id not in AVATAR_CACHE:
             avatar_url = user.avatar_url
             resp = requests.get(avatar_url)
@@ -96,7 +96,7 @@ async def generate_image(leaderboard: "list[tuple[int, int]]", generating_user: 
         bar_color = BAR_USER_COLOR
         if user_id != generating_user:
             bar_color = BAR_POSITION_COLORS.get(index, BAR_DEFAULT_COLOR)
-        row_draw.text((ROW_HEIGHT, 0), f"{user.name} ({nice_time(score)})", fill=bar_color)
+        row_draw.text((ROW_HEIGHT+BAR_SIDE_MARGIN, 0), f"{user.name} ({nice_time(score)})", fill=bar_color)
         bar_length = (score/max_score)*BAR_MAX_LENGTH
         row_draw.rounded_rectangle((BAR_LEFT_EDGE, BAR_TOP_MARGIN, BAR_LEFT_EDGE+bar_length, BAR_TOP_MARGIN+BAR_HEIGHT), fill=bar_color, radius = 4)
         image_segments.append(row)
