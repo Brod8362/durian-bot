@@ -5,6 +5,8 @@ import sqlite3
 import toml
 import os
 import time
+from io import BytesIO
+from util import nice_time, generate_image
 
 # this is a hastily thrown together bot that doesn't really use a lot of good pratices
 
@@ -35,6 +37,16 @@ def db_get_all_time():
     cur.close()
     return kv
 
+def current_leaderboard():
+    times = db_get_all_time()
+    for user in join_time:
+        if user not in times:
+            times[user] = 0
+        times[user] += time.time() - join_time[user]
+    lb = list(times.items())
+    lb.sort(key= lambda x: x[1], reverse=True)
+    return lb
+
 @dclient.event
 async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
     if (before.channel == None or before.channel.id != conf["channel"]) and after.channel.id == conf["channel"]:
@@ -45,43 +57,29 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         elapsed = time.time() - join_time.pop(member.id)
         db_update_time(member.id, elapsed)
 
-def nice_time(seconds) -> str:
-    units = {
-        "d": 60*60*24,
-        "h": 60*60,
-        "m": 60,
-        "s": 1
-    }
-    remaining = int(seconds)
-    output = []
-    for unit in units:
-        ratio = remaining/units[unit]
-        if ratio >= 1.0:
-            remaining -= int(ratio)*units[unit]
-            output.append(f"{int(ratio)}{unit}")
-    return " ".join(output)
-
 @dclient.event
 async def on_message(message):
-    if message.content.startswith("$lb"):
-        times = db_get_all_time()
-        for user in join_time:
-            if user not in times:
-                times[user] = 0
-            times[user] += time.time() - join_time[user]
-        lb = list(times.items())
-        lb.sort(key= lambda x: x[1], reverse=True)
+    if message.content == "$lb":
+        lb = current_leaderboard()
         entries = ["```", "== DURIAN LEADERBOARD =="]
         for t in lb[:10]:
             user = await dclient.fetch_user(t[0])
             entries.append(f"{user.name}: {nice_time(t[1])}")
         entries.append("```")
         await message.channel.send("\n".join(entries))
+    elif message.content == "$lbi":
+        lb = current_leaderboard()
+        image = await generate_image(lb, message.author.id, dclient)
+        with BytesIO() as fd:
+            image.save(fd, format="PNG")
+            fd.seek(0)
+            await message.channel.send(file=discord.File(fd, filename="leaderboard.png"))
+        
 
 @dclient.event
 async def on_ready():
     print("ok")
-    activity = discord.Game("$lb", type=3)
+    activity = discord.Game("$lb / $lbi", type=3)
     await dclient.change_presence(status=discord.Status.online, activity=activity)
     chan = await dclient.fetch_channel(conf["channel"])
     for x in chan.members:
