@@ -5,6 +5,8 @@ import asyncio
 import requests
 from io import BytesIO
 
+AVATAR_CACHE = {}
+
 class PhonyDiscordUser:
     def __init__(self, id, name, avatar):
         self.id = id
@@ -78,12 +80,17 @@ async def generate_image(leaderboard: "list[tuple[int, int]]", generating_user: 
         print(index)
         row = Image.new("RGBA", (IMAGE_WIDTH, ROW_HEIGHT))
         user = await discord.fetch_user(user_id)
-        avatar_url = user.avatar_url
-        resp = requests.get(avatar_url)
-        if resp.status_code != 200:
-            print("failed to get user avatar")
-        avatar_i = Image.open(BytesIO(resp.content))
-        avatar_i = avatar_i.resize((ROW_HEIGHT, ROW_HEIGHT))
+        
+        if user_id not in AVATAR_CACHE:
+            avatar_url = user.avatar_url
+            resp = requests.get(avatar_url)
+            if resp.status_code != 200:
+                print("failed to get user avatar")
+            temp_image = Image.open(BytesIO(resp.content))
+            temp_image = temp_image.resize((ROW_HEIGHT, ROW_HEIGHT))
+            AVATAR_CACHE[user_id] = temp_image
+
+        avatar_i = AVATAR_CACHE[user_id]
         row.paste(avatar_i, None)
         row_draw = ImageDraw.Draw(row)
         bar_color = BAR_USER_COLOR
