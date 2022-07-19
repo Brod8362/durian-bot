@@ -77,7 +77,6 @@ async def generate_image(leaderboard: "list[tuple[int, int]]", generating_user: 
     max_score = max(map(lambda x: x[1], leaderboard))
     ## generate user rows
     for (index, (user_id, score)) in enumerate(effective_leaderboard):
-        print(index)
         row = Image.new("RGBA", (IMAGE_WIDTH, ROW_HEIGHT))
         user = await discord.fetch_user(user_id)
 
